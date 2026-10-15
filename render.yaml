@@ -1,0 +1,51 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+#
+# ABOUT THE DATABASE
+# Render's *free* PostgreSQL expires 30 days after creation and is then DELETED
+# together with all of its data. To stay free for the long term this blueprint
+# deliberately does NOT provision a Render database. Instead it expects an
+# external, permanently-free PostgreSQL (e.g. Neon or Supabase), whose
+# connection string you paste into DATABASE_URL when creating the Blueprint.
+#
+# We ship psycopg 3, and the app rewrites the scheme to `postgresql+psycopg://`
+# automatically, so paste the provider's URL exactly as they give it to you.
+#
+# To use a Render-managed database instead, see the commented block at the end.
+
+services:
+  - type: web
+    name: trackit
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # Migrate, then serve. `flask db upgrade` must run once per deploy.
+    startCommand: flask db upgrade && gunicorn --bind 0.0.0.0:$PORT --workers 3 --timeout 60 wsgi:app
+    healthCheckPath: /login
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SESSION_COOKIE_SECURE
+        value: "1"
+      - key: TRUST_PROXY
+        value: "1"
+      # Not managed by the blueprint: Render prompts for this value on first
+      # deploy. Paste the Neon/Supabase connection string.
+      - key: DATABASE_URL
+        sync: false
+
+# --- Alternative: Render-managed database (free, but expires after 30 days) ---
+#
+# databases:
+#   - name: trackit-db
+#     plan: free
+#     databaseName: trackit
+#     user: trackit
+#
+# ...and replace the DATABASE_URL entry above with:
+#
+#       - key: DATABASE_URL
+#         fromDatabase:
+#           name: trackit-db
+#           property: connectionString

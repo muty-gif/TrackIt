@@ -31,6 +31,11 @@ def create_app(config_object="config.Config", overrides: dict | None = None) -> 
     if overrides:
         app.config.update(overrides)
 
+    if app.config.get("TRUST_PROXY"):
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
     os.makedirs(app.instance_path, exist_ok=True)
 
     db.init_app(app)
