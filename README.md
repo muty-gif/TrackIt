@@ -140,6 +140,34 @@ These resolve the open questions raised in `USE-CASES.md`:
 | Task project | Immutable — a task cannot be moved between projects. |
 | Session | Signed cookie, `HttpOnly`, `SameSite=Lax`, 7-day lifetime. |
 
+## Neon (the configured database)
+
+This project is linked to a Neon project: `neon.ts` declares the services and
+`.neon` records the project/branch. `neon deploy` writes the connection strings
+into `.env.local` (git-ignored):
+
+| Variable | Used by | Connection |
+|---|---|---|
+| `DATABASE_URL` | the application | **pooled** (host contains `-pooler`) |
+| `DATABASE_URL_UNPOOLED` | `flask db upgrade` (Alembic) | **direct** |
+
+Migrations must use the **direct** connection: Neon's pooler runs PgBouncer in
+transaction mode, which does not support the session-level state Alembic relies
+on. `config.py` loads `.env.local` before `.env` (without overriding real
+environment variables), and `migrations/env.py` automatically prefers
+`DATABASE_URL_UNPOOLED` when it is set. Both URLs are normalised to the
+`postgresql+psycopg://` driver.
+
+```bash
+neon deploy        # apply neon.ts to the branch and refresh .env.local
+flask db upgrade   # migrate the Neon database (direct connection)
+npm run build      # gate: `neon config plan` + the Flask test suite
+```
+
+There is no JavaScript bundling step — the front end is plain HTML/CSS/JS served
+by Flask — so `npm run build` acts as the gate for the Neon config and the Python
+test suite instead.
+
 ## Deploying
 
 The Flask development server is for local use only. In production, serve the

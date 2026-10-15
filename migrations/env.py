@@ -1,7 +1,12 @@
 import logging
+import os
 from logging.config import fileConfig
 
 from flask import current_app
+from sqlalchemy import create_engine
+
+# Importing config also loads .env.local / .env into os.environ.
+from config import normalize_database_url
 
 from alembic import context
 
@@ -14,8 +19,19 @@ config = context.config
 fileConfig(config.config_file_name)
 logger = logging.getLogger('alembic.env')
 
+# Neon exposes two connection strings for the same database: a pooled one
+# (DATABASE_URL) used by the application, and a direct one
+# (DATABASE_URL_UNPOOLED). Migrations must use the direct connection: the pooler
+# runs PgBouncer in transaction mode, which does not support the session-level
+# state that Alembic relies on.
+MIGRATION_URL = os.environ.get("DATABASE_URL_UNPOOLED")
+if MIGRATION_URL:
+    MIGRATION_URL = normalize_database_url(MIGRATION_URL)
+
 
 def get_engine():
+    if MIGRATION_URL:
+        return create_engine(MIGRATION_URL)
     try:
         # this works with Flask-SQLAlchemy<3 and Alchemical
         return current_app.extensions['migrate'].db.get_engine()
@@ -25,6 +41,8 @@ def get_engine():
 
 
 def get_engine_url():
+    if MIGRATION_URL:
+        return MIGRATION_URL.replace('%', '%%')
     try:
         return get_engine().url.render_as_string(hide_password=False).replace(
             '%', '%%')

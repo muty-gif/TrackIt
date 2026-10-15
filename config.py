@@ -15,6 +15,10 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent
 INSTANCE_DIR = BASE_DIR / "instance"
 
+# `.env.local` is written by `neon deploy` (machine-local and git-ignored) and
+# must take precedence over the committed defaults in `.env`. Real environment
+# variables win over both because load_dotenv does not override by default.
+load_dotenv(BASE_DIR / ".env.local")
 load_dotenv(BASE_DIR / ".env")
 
 
