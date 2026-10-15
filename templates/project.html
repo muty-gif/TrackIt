@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project · TrackIt</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <header id="app-nav" class="app-nav"></header>
+
+  <main class="container">
+    <div id="global-error" class="alert alert-error" hidden></div>
+
+    <div id="not-found" class="empty-state" hidden>
+      <h1>Project not found</h1>
+      <p class="muted">This project does not exist, or it is not yours.</p>
+      <a class="btn btn-primary" href="{{ url_for('main.projects_page') }}">Back to my projects</a>
+    </div>
+
+    <section id="project-content" hidden>
+      <p class="breadcrumb"><a href="{{ url_for('main.projects_page') }}">&larr; All projects</a></p>
+
+      <div class="page-head">
+        <div>
+          <h1 id="project-title"></h1>
+          <p id="project-description" class="muted"></p>
+          <p id="project-meta" class="muted small"></p>
+        </div>
+        <div class="head-actions">
+          <button id="edit-project-btn" class="btn btn-ghost" type="button">Edit</button>
+          <button id="delete-project-btn" class="btn btn-danger" type="button">Delete</button>
+        </div>
+      </div>
+
+      <form id="project-edit-form" class="card form" hidden novalidate>
+        <div class="field">
+          <label for="project-name">Name</label>
+          <input id="project-name" name="name" type="text" required>
+          <p class="field-error" data-error-for="name" hidden></p>
+        </div>
+        <div class="field">
+          <label for="project-description-input">Description <span class="muted">(optional)</span></label>
+          <textarea id="project-description-input" name="description" rows="3"></textarea>
+          <p class="field-error" data-error-for="description" hidden></p>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save changes</button>
+          <button type="button" id="cancel-project-edit" class="btn btn-ghost">Cancel</button>
+        </div>
+      </form>
+
+      <section class="tasks-section">
+        <div class="section-head">
+          <h2>Tasks</h2>
+          <button id="new-task-btn" class="btn btn-primary btn-sm" type="button">New task</button>
+        </div>
+
+        <form id="task-form" class="card form" hidden novalidate>
+          <div class="field">
+            <label for="task-title">Title</label>
+            <input id="task-title" name="title" type="text" required>
+            <p class="field-error" data-error-for="title" hidden></p>
+          </div>
+          <div class="field">
+            <label for="task-description">Description <span class="muted">(optional)</span></label>
+            <textarea id="task-description" name="description" rows="2"></textarea>
+            <p class="field-error" data-error-for="description" hidden></p>
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="task-submit" class="btn btn-primary">Add task</button>
+            <button type="button" id="cancel-task-form" class="btn btn-ghost" hidden>Cancel</button>
+          </div>
+        </form>
+
+        <ul id="task-list" class="task-list"></ul>
+        <p id="tasks-empty" class="empty muted" hidden>No tasks yet. Add your first task above.</p>
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="{{ url_for('static', filename='js/project.js') }}"></script>
+</body>
+</html>

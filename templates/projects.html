@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projects · TrackIt</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <header id="app-nav" class="app-nav"></header>
+
+  <main class="container">
+    <div id="global-error" class="alert alert-error" hidden></div>
+
+    <div class="page-head">
+      <div>
+        <h1>Your projects</h1>
+        <p class="muted small">Everything you are tracking, in one place.</p>
+      </div>
+      <button id="new-project-btn" class="btn btn-primary" type="button">New project</button>
+    </div>
+
+    <form id="project-form" class="card form" hidden novalidate>
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" required>
+        <p class="field-error" data-error-for="name" hidden></p>
+      </div>
+      <div class="field">
+        <label for="description">Description <span class="muted">(optional)</span></label>
+        <textarea id="description" name="description" rows="3"></textarea>
+        <p class="field-error" data-error-for="description" hidden></p>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Create project</button>
+        <button type="button" id="cancel-project-btn" class="btn btn-ghost">Cancel</button>
+      </div>
+    </form>
+
+    <ul id="project-list" class="card-list"></ul>
+    <p id="projects-empty" class="empty muted" hidden>You have no projects yet. Create your first one.</p>
+  </main>
+
+  <script type="module" src="{{ url_for('static', filename='js/projects.js') }}"></script>
+</body>
+</html>
