@@ -7,6 +7,26 @@ user's data.
 
 The behaviour implemented here is described in [`USE-CASES.md`](USE-CASES.md).
 
+## Screenshots
+
+**Sign in and register**
+
+| Log in | Register |
+|---|---|
+| ![Log in page](docs/screenshots/01-login.png) | ![Registration page](docs/screenshots/02-register.png) |
+
+**Projects**
+
+| Create a project | Project list |
+|---|---|
+| ![New project form filled in](docs/screenshots/03-new-project.png) | ![Projects list showing one project](docs/screenshots/04-projects.png) |
+
+**Tasks**
+
+| Add a task | Track progress |
+|---|---|
+| ![New task form filled in](docs/screenshots/05-new-task.png) | ![Task list with two tasks completed](docs/screenshots/06-tasks.png) |
+
 ## Stack
 
 **Backend** — Python, Flask, Flask Blueprints, SQLAlchemy (via Flask-SQLAlchemy),
@@ -38,7 +58,8 @@ TrackIt/
 │   ├── css/styles.css
 │   └── js/                    # api.js, ui.js, nav.js + one module per page
 ├── migrations/                # Alembic migrations managed by Flask-Migrate
-├── tests/                     # unittest suite (52 tests)
+├── tests/                     # unittest suite (57 tests)
+├── docs/screenshots/          # screenshots used in this README
 ├── USE-CASES.md               # requirements / use case specification
 ├── requirements.txt
 └── .env.example

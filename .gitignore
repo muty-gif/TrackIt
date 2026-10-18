@@ -6,4 +6,5 @@ instance/
 .pytest_cache/
 .neon
 node_modules/
+.agents/
 .env.local
