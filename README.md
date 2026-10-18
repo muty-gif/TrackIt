@@ -198,15 +198,16 @@ handle HTTPS.
 ### 1. Decide on the database first
 
 SQLite (the default) is fine for a single small instance **only if the disk
-persists** between deploys. Most PaaS filesystems are ephemeral, so set
-`DATABASE_URL` to a managed PostgreSQL/MySQL database:
+persists** between deploys. Most PaaS filesystems are ephemeral, so point
+`DATABASE_URL` at a managed PostgreSQL database:
 
 ```
 DATABASE_URL=postgresql+psycopg://user:password@host:5432/trackit
 ```
 
-That requires the driver: `pip install "psycopg[binary]"` and adding it to
-`requirements.txt`.
+Managed hosts hand out `postgres://`-style URLs; `config.normalize_database_url()`
+rewrites them to the `postgresql+psycopg://` scheme automatically, and the driver
+(`psycopg[binary]`) is already in `requirements.txt`.
 
 ### 2. Set production environment variables
 
@@ -225,7 +226,8 @@ flask db upgrade                                   # run on every release
 gunicorn --bind 0.0.0.0:$PORT --workers 3 wsgi:app # start the app
 ```
 
-A `Procfile` is included for platforms that read one (Heroku, Railway, ...):
+The bundled `Procfile` does the same on platforms that read one (Heroku,
+Railway):
 
 ```
 release: flask db upgrade
@@ -234,73 +236,32 @@ web: gunicorn --bind 0.0.0.0:$PORT --workers 3 --timeout 60 --access-logfile - w
 
 ### Free hosting that does not expire
 
+`render.yaml` and `railway.json` are ready-made for the two hosts worth using;
+pair either with a permanent free Postgres.
+
 | Service | Free tier | Expires? |
 |---|---|---|
-| **Neon** (Postgres) | 0.5 GB, 100 compute-hours/month; suspends after ~5 min idle, wakes on demand | **No** — permanent free tier |
-| **Supabase** (Postgres) | 500 MB; project pauses after ~1 week idle | **No** — pauses, data retained |
+| **Neon** (Postgres) | 0.5 GB, 100 compute-hours/month; suspends after ~5 min idle, wakes on demand | **No** — permanent |
 | **Render** (web service) | 750 instance-hours/month; spins down after ~15 min idle | **No** — persists |
-| **Render** (Postgres) | 1 GB | **Yes — deleted 30 days after creation** |
+| **Supabase** (Postgres) | 500 MB; pauses after ~1 week idle, data retained | **No** — pauses |
+| **Render** (Postgres) | 1 GB | **Yes** — deleted 30 days after creation |
 | **Railway** | One-off trial credit | **Yes** — no permanent free DB |
 
-So the recipe for a long-lived free deployment is **Neon (database) + Render
-(web service)**. The blueprint is already configured this way.
+So the long-lived free recipe is **Neon (database) + Render (web service)**:
 
-### Step 1 — Create a free Neon database
-
-1. Sign up at [neon.com](https://neon.com) and create a project (pick the region
-   closest to your users).
-2. Copy the **connection string** — it looks like
-   `postgresql://user:password@ep-xxx.aws.neon.tech/neondb?sslmode=require`.
-
-No edits needed: the app rewrites the scheme to `postgresql+psycopg://` and keeps
-`?sslmode=require` intact.
-
-### Step 2 — Deploy to Render (blueprint included)
-
-`render.yaml` deploys the web service; you supply the database URL.
-
-1. Push this repository to GitHub/GitLab.
-2. On Render: **New → Blueprint**, select the repo. Render reads `render.yaml`.
-3. When prompted for `DATABASE_URL`, paste the Neon connection string.
-4. Deploy — the start command runs `flask db upgrade`, then starts gunicorn.
-5. Open the service URL — HTTPS is provided automatically.
-
-> Prefer a Render-managed database instead? Uncomment the `databases:` block in
-> `render.yaml`, but remember it is deleted after 30 days.
-
-### Deploying to Railway
-
-1. **New Project → Deploy from GitHub repo.**
-2. In the service's **Variables**, add `SECRET_KEY` (random),
-   `SESSION_COOKIE_SECURE=1`, `TRUST_PROXY=1`, and `DATABASE_URL` (your Neon URL —
-   Railway's own free database is only a limited trial).
-3. `railway.json` sets the start command (migrate + gunicorn) and healthcheck path.
-4. **Settings → Networking → Generate Domain** to get a public URL.
-
-### Deploying anywhere else
-
-Any host that can run a Python process works:
-
-```bash
-pip install -r requirements.txt
-flask db upgrade
-gunicorn --bind 0.0.0.0:$PORT --workers 3 wsgi:app
-```
-
-- **VPS (nginx + gunicorn + systemd):** run gunicorn on `127.0.0.1:8000`, put nginx
-  in front with TLS (e.g. Certbot), and set `TRUST_PROXY=1`.
-- **Docker:** base the image on `python:3.12-slim`, install `requirements.txt`,
-  run `flask db upgrade` on release, and start `gunicorn --bind 0.0.0.0:8000 wsgi:app`.
-
-### Why the database matters
-
-Managed hosts hand out URLs like `postgresql://user:pass@host/db`. SQLAlchemy
-would look for the `psycopg2` driver, but this project ships **psycopg 3**;
-`config.normalize_database_url()` rewrites the scheme to `postgresql+psycopg://`
-so no manual URL editing is needed. Without a persistent database you would lose
-all users, projects and tasks on every deploy — which is exactly what the default
-SQLite file would do on an ephemeral filesystem.
-
+- **Neon** — sign up at [neon.com](https://neon.com), create a project, and copy
+  the connection string (it looks like
+  `postgresql://user:password@ep-xxx.aws.neon.tech/neondb?sslmode=require`).
+- **Render** — *New → Blueprint*, pick the repo, and paste the Neon URL when
+  prompted for `DATABASE_URL`. The start command migrates then starts gunicorn,
+  and HTTPS is automatic. To use a Render-managed database instead, uncomment the
+  `databases:` block in `render.yaml` — but it is deleted after 30 days.
+- **Railway** — *New Project → Deploy from GitHub repo*, add the step 2 variables
+  under **Variables**, then *Settings → Networking → Generate Domain*.
+- **Anywhere else** — `pip install -r requirements.txt`, `flask db upgrade`,
+  `gunicorn --bind 0.0.0.0:$PORT --workers 3 wsgi:app`. On a VPS, run gunicorn on
+  `127.0.0.1:8000` behind nginx + TLS and set `TRUST_PROXY=1`; in Docker, base on
+  `python:3.12-slim` and run the same three commands.
 
 ### Production checklist
 
