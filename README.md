@@ -1,5 +1,7 @@
 # TrackIt
 
+**English** | [Español](README.es.md)
+
 TrackIt is a small web application where registered users manage personal
 projects and the tasks inside them. Each project belongs to exactly one user and
 each task belongs to exactly one project; users can never see or change another
