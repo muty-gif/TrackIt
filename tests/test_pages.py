@@ -26,11 +26,23 @@ class PageGuardTests(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Your projects", response.get_data(as_text=True))
 
+    def test_root_shows_dashboard_when_authenticated(self):
+        self.register("alice@example.com")
+        response = self.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Dashboard", response.get_data(as_text=True))
+
+    def test_dashboard_page_redirects_to_root(self):
+        self.register("alice@example.com")
+        response = self.get("/dashboard")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/")
+
     def test_login_page_redirects_authenticated_user(self):
         self.register("alice@example.com")
         response = self.get("/login")
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/projects", response.headers["Location"])
+        self.assertEqual(response.headers["Location"], "/")
 
 
 class ApiErrorShapeTests(BaseTestCase):

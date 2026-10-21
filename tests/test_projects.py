@@ -25,6 +25,30 @@ class ProjectCrudTests(BaseTestCase):
         self.assertEqual(project["name"], "Website")
         self.assertEqual(project["description"], "Build the marketing site")
         self.assertEqual(project["tasks"], [])
+        self.assertIsNone(project["due_date"])
+
+    def test_create_and_update_project_due_date(self):
+        response = self.post(
+            "/api/projects", {"name": "Website", "due_date": "2026-12-01"}
+        )
+        self.assertEqual(response.status_code, 201)
+        project = response.get_json()["project"]
+        self.assertEqual(project["due_date"], "2026-12-01")
+
+        updated = self.patch(
+            f"/api/projects/{project['id']}", {"due_date": "2026-12-15"}
+        )
+        self.assertEqual(updated.get_json()["project"]["due_date"], "2026-12-15")
+
+        cleared = self.patch(f"/api/projects/{project['id']}", {"due_date": None})
+        self.assertIsNone(cleared.get_json()["project"]["due_date"])
+
+    def test_invalid_project_due_date_is_rejected(self):
+        response = self.post(
+            "/api/projects", {"name": "Website", "due_date": "soon"}
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("due_date", response.get_json()["error"]["fields"])
 
     def test_create_project_requires_a_name(self):
         response = self.post("/api/projects", {"description": "no name"})

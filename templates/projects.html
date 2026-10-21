@@ -1,46 +1,84 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Projects · TrackIt</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-</head>
-<body>
-  <header id="app-nav" class="app-nav"></header>
+{% extends "base.html" %}
 
-  <main class="container">
-    <div id="global-error" class="alert alert-error" hidden></div>
+{% block title %}Projects · TrackIt{% endblock %}
+
+{% block nav %}
+  <header id="app-nav" class="app-nav" aria-label="Main navigation"></header>
+{% endblock %}
+
+{% block body %}
+  <main id="main" class="container">
+    <div id="global-error" class="alert alert-error" role="alert" hidden></div>
 
     <div class="page-head">
       <div>
+        <p class="eyebrow">Workspace</p>
         <h1>Your projects</h1>
-        <p class="muted small">Everything you are tracking, in one place.</p>
+        <p class="muted">Everything you are tracking, in one place.</p>
       </div>
-      <button id="new-project-btn" class="btn btn-primary" type="button">New project</button>
+      <button id="new-project-btn" class="btn btn-primary" type="button">
+        <span class="btn-icon" aria-hidden="true">+</span> New project
+      </button>
     </div>
 
-    <form id="project-form" class="card form" hidden novalidate>
+    <div id="project-grid" class="project-grid"></div>
+
+    <div id="projects-empty" class="empty-state" hidden>
+      <span class="empty-mark" aria-hidden="true">+</span>
+      <h2>No projects yet</h2>
+      <p class="muted">Create your first project to start tracking tasks and progress.</p>
+      <button class="btn btn-primary" type="button" data-new-project>Create a project</button>
+    </div>
+  </main>
+
+  <dialog id="project-dialog" class="modal" aria-labelledby="project-dialog-title">
+    <form id="project-form" class="modal-card form" novalidate>
+      <input type="hidden" name="project_id" id="project-id">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow" id="project-dialog-kicker">New project</p>
+          <h2 id="project-dialog-title">Create project</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="Close dialog">×</button>
+      </div>
+
       <div class="field">
         <label for="name">Name</label>
-        <input id="name" name="name" type="text" required>
+        <input id="name" name="name" type="text" required autocomplete="off">
         <p class="field-error" data-error-for="name" hidden></p>
       </div>
+
       <div class="field">
         <label for="description">Description <span class="muted">(optional)</span></label>
         <textarea id="description" name="description" rows="3"></textarea>
         <p class="field-error" data-error-for="description" hidden></p>
       </div>
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Create project</button>
-        <button type="button" id="cancel-project-btn" class="btn btn-ghost">Cancel</button>
+
+      <div class="field">
+        <label for="due_date">Due date <span class="muted">(optional)</span></label>
+        <input id="due_date" name="due_date" type="date">
+        <p class="field-error" data-error-for="due_date" hidden></p>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close-dialog>Cancel</button>
+        <button type="submit" id="project-submit" class="btn btn-primary">Create project</button>
       </div>
     </form>
+  </dialog>
 
-    <ul id="project-list" class="card-list"></ul>
-    <p id="projects-empty" class="empty muted" hidden>You have no projects yet. Create your first one.</p>
-  </main>
+  <dialog id="confirm-dialog" class="modal" aria-labelledby="confirm-title">
+    <div class="modal-card">
+      <h2 id="confirm-title">Are you sure?</h2>
+      <p id="confirm-message" class="muted"></p>
+      <div class="modal-actions">
+        <button id="confirm-cancel" class="btn btn-ghost" type="button">Cancel</button>
+        <button id="confirm-accept" class="btn btn-danger" type="button">Delete</button>
+      </div>
+    </div>
+  </dialog>
+{% endblock %}
 
+{% block scripts %}
   <script type="module" src="{{ url_for('static', filename='js/projects.js') }}"></script>
-</body>
-</html>
+{% endblock %}

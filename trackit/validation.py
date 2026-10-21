@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from datetime import date as date_type
 
 from flask import current_app, request
 
@@ -94,6 +95,24 @@ class Validator:
             min_length=current_app.config["PASSWORD_MIN_LENGTH"],
             max_length=current_app.config["PASSWORD_MAX_LENGTH"],
         )
+
+    def date(self, data: dict, field: str = "due_date", *, required: bool = False):
+        """Parse an ISO calendar date (``YYYY-MM-DD``); empty means no date."""
+        if field not in data or data[field] in (None, ""):
+            if required:
+                self.errors[field] = "This field is required."
+            return None
+
+        value = data[field]
+        if not isinstance(value, str):
+            self.errors[field] = "Enter a valid date (YYYY-MM-DD)."
+            return None
+
+        try:
+            return date_type.fromisoformat(value.strip())
+        except ValueError:
+            self.errors[field] = "Enter a valid date (YYYY-MM-DD)."
+            return None
 
     def choice(self, data: dict, field: str, allowed, *, required: bool = True, default=None):
         if field not in data or data[field] is None:

@@ -1,84 +1,181 @@
 import { ApiError, apiFetch } from "./api.js";
 import { renderNav } from "./nav.js";
-import { applyFieldErrors, clear, clearFieldErrors, el, hideError, showError } from "./ui.js";
+import {
+  applyFieldErrors,
+  clear,
+  clearFieldErrors,
+  confirmAction,
+  dueMeta,
+  el,
+  hideError,
+  openDialog,
+  setupDialog,
+  showError,
+  showToast,
+} from "./ui.js";
 
-const listEl = document.getElementById("project-list");
-const emptyEl = document.getElementById("projects-empty");
+const grid = document.getElementById("project-grid");
+const empty = document.getElementById("projects-empty");
 const errorBox = document.getElementById("global-error");
+const dialog = document.getElementById("project-dialog");
 const form = document.getElementById("project-form");
-const newBtn = document.getElementById("new-project-btn");
-const cancelBtn = document.getElementById("cancel-project-btn");
+const submit = document.getElementById("project-submit");
+const kicker = document.getElementById("project-dialog-kicker");
+const dialogTitle = document.getElementById("project-dialog-title");
+
+let projects = [];
 
 renderNav();
+setupDialog(dialog);
+setupDialog(document.getElementById("confirm-dialog"));
 
-function openForm() {
-  clearFieldErrors(form);
-  hideError(errorBox);
-  form.reset();
-  form.hidden = false;
-  form.elements.name.focus();
+function projectState(project) {
+  const total = project.task_count || 0;
+  const done = project.completed_task_count || 0;
+  if (!total) return { label: "Not started", className: "badge-pending" };
+  if (done === total) return { label: "Done", className: "badge-completed" };
+  const due = dueMeta(project.due_date);
+  if (due.overdue) return { label: "Overdue", className: "badge-danger" };
+  if (done > 0) return { label: "In progress", className: "badge-in_progress" };
+  if (project.due_date) {
+    return { label: "Due soon", className: "badge-warning" };
+  }
+  return { label: "To do", className: "badge-pending" };
 }
 
-function closeForm() {
-  form.hidden = true;
-  clearFieldErrors(form);
-}
+function renderProjectCard(project) {
+  const total = project.task_count || 0;
+  const done = project.completed_task_count || 0;
+  const percent = total ? Math.round((done / total) * 100) : 0;
+  const state = projectState(project);
+  const due = dueMeta(project.due_date);
 
-newBtn.addEventListener("click", openForm);
-cancelBtn.addEventListener("click", closeForm);
-
-function projectCard(project) {
-  const header = el("div", { class: "card-head" }, [
+  const head = el("div", { class: "project-card-head" }, [
     el("a", {
-      class: "card-title",
+      class: "project-card-title",
       href: `/projects/${project.id}`,
       text: project.name,
     }),
-    el("button", {
-      class: "btn btn-danger-text btn-sm",
-      type: "button",
-      text: "Delete",
-      onclick: () => removeProject(project),
-    }),
+    el("div", { class: "project-card-actions" }, [
+      el("button", {
+        class: "icon-btn",
+        type: "button",
+        text: "✎",
+        "aria-label": `Edit ${project.name}`,
+        title: "Edit project",
+        onclick: () => openEdit(project),
+      }),
+      el("button", {
+        class: "icon-btn",
+        type: "button",
+        text: "×",
+        "aria-label": `Delete ${project.name}`,
+        title: "Delete project",
+        onclick: () => removeProject(project),
+      }),
+    ]),
   ]);
 
-  const children = [header];
+  const card = el("article", { class: "project-card" }, [head]);
+
   if (project.description) {
-    children.push(el("p", { class: "card-desc", text: project.description }));
+    card.append(el("p", { class: "project-card-desc", text: project.description }));
   }
-  children.push(
-    el("p", {
-      class: "card-meta muted",
-      text: `${project.completed_task_count} of ${project.task_count} tasks completed`,
-    })
+
+  card.append(
+    el("div", { class: "project-card-meta" }, [
+      el("span", { class: `badge ${state.className}`, text: state.label }),
+      project.due_date
+        ? el("span", {
+            class: `meta-item${due.overdue ? " is-overdue" : ""}`,
+            text: due.text,
+          })
+        : el("span", { class: "meta-item", text: "No due date" }),
+    ])
   );
 
-  return el("li", { class: "card" }, children);
+  const bar = el(
+    "div",
+    {
+      class: `progress${percent === 100 && total ? " is-complete" : ""}`,
+      role: "progressbar",
+      "aria-label": `${project.name} completion`,
+      "aria-valuemin": "0",
+      "aria-valuemax": "100",
+      "aria-valuenow": String(percent),
+    },
+    [el("span", { class: "progress-fill" })]
+  );
+  bar.firstChild.style.width = `${percent}%`;
+
+  card.append(
+    el("div", { class: "project-card-progress" }, [
+      bar,
+      el("div", { class: "project-card-progress-label" }, [
+        el("span", { text: `${done} of ${total} tasks completed` }),
+        el("span", { text: `${percent}%` }),
+      ]),
+    ])
+  );
+
+  return card;
 }
 
-function renderProjects(projects) {
-  clear(listEl);
-  emptyEl.hidden = projects.length > 0;
-  for (const project of projects) listEl.append(projectCard(project));
+function renderProjects() {
+  clear(grid);
+  empty.hidden = projects.length > 0;
+  for (const project of projects) grid.append(renderProjectCard(project));
 }
 
 async function loadProjects() {
+  hideError(errorBox);
   try {
     const data = await apiFetch("/api/projects");
-    renderProjects(data.projects);
+    projects = data.projects;
+    renderProjects();
   } catch (error) {
     showError(errorBox, error.message);
   }
 }
 
+function resetForm() {
+  form.reset();
+  form.elements.project_id.value = "";
+  clearFieldErrors(form);
+  hideError(errorBox);
+}
+
+function openCreate() {
+  resetForm();
+  kicker.textContent = "New project";
+  dialogTitle.textContent = "Create project";
+  submit.textContent = "Create project";
+  openDialog(dialog, "#name");
+}
+
+function openEdit(project) {
+  resetForm();
+  form.elements.project_id.value = String(project.id);
+  form.elements.name.value = project.name;
+  form.elements.description.value = project.description || "";
+  form.elements.due_date.value = project.due_date || "";
+  kicker.textContent = "Project";
+  dialogTitle.textContent = "Edit project";
+  submit.textContent = "Save changes";
+  openDialog(dialog, "#name");
+}
+
 async function removeProject(project) {
-  const confirmed = window.confirm(
-    `Delete "${project.name}" and all of its tasks? This cannot be undone.`
-  );
+  const confirmed = await confirmAction({
+    title: "Delete project?",
+    message: `Delete "${project.name}" and all of its tasks? This cannot be undone.`,
+    confirmLabel: "Delete project",
+  });
   if (!confirmed) return;
 
   try {
     await apiFetch(`/api/projects/${project.id}`, { method: "DELETE" });
+    showToast("Project deleted");
     await loadProjects();
   } catch (error) {
     showError(errorBox, error.message);
@@ -91,16 +188,20 @@ form.addEventListener("submit", async (event) => {
   clearFieldErrors(form);
 
   const values = Object.fromEntries(new FormData(form).entries());
+  const projectId = values.project_id;
+  const body = {
+    name: values.name,
+    description: values.description || null,
+    due_date: values.due_date || null,
+  };
 
   try {
-    await apiFetch("/api/projects", {
-      method: "POST",
-      body: {
-        name: values.name,
-        description: values.description ? values.description : null,
-      },
+    await apiFetch(projectId ? `/api/projects/${projectId}` : "/api/projects", {
+      method: projectId ? "PATCH" : "POST",
+      body,
     });
-    closeForm();
+    dialog.close();
+    showToast(projectId ? "Project updated" : "Project created");
     await loadProjects();
   } catch (error) {
     if (error instanceof ApiError && Object.keys(error.fields).length) {
@@ -109,6 +210,11 @@ form.addEventListener("submit", async (event) => {
       showError(errorBox, error.message);
     }
   }
+});
+
+document.getElementById("new-project-btn").addEventListener("click", openCreate);
+document.querySelectorAll("[data-new-project]").forEach((button) => {
+  button.addEventListener("click", openCreate);
 });
 
 loadProjects();

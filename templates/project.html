@@ -1,16 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Project · TrackIt</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-</head>
-<body>
-  <header id="app-nav" class="app-nav"></header>
+{% extends "base.html" %}
 
-  <main class="container">
-    <div id="global-error" class="alert alert-error" hidden></div>
+{% block title %}Project · TrackIt{% endblock %}
+
+{% block nav %}
+  <header id="app-nav" class="app-nav" aria-label="Main navigation"></header>
+{% endblock %}
+
+{% block body %}
+  <main id="main" class="container">
+    <div id="global-error" class="alert alert-error" role="alert" hidden></div>
 
     <div id="not-found" class="empty-state" hidden>
       <h1>Project not found</h1>
@@ -21,64 +19,192 @@
     <section id="project-content" hidden>
       <p class="breadcrumb"><a href="{{ url_for('main.projects_page') }}">&larr; All projects</a></p>
 
-      <div class="page-head">
-        <div>
+      <header class="project-hero">
+        <div class="project-hero-main">
+          <div class="meta-row">
+            <span id="project-status-badge" class="badge"></span>
+            <span id="project-due-date" class="meta-item"></span>
+          </div>
           <h1 id="project-title"></h1>
-          <p id="project-description" class="muted"></p>
-          <p id="project-meta" class="muted small"></p>
+          <p id="project-description" class="project-description muted"></p>
+          <div class="progress-row">
+            <div
+              id="project-progress"
+              class="progress"
+              role="progressbar"
+              aria-label="Project completion"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+            >
+              <span id="project-progress-fill" class="progress-fill"></span>
+            </div>
+            <span id="project-progress-label" class="small muted">0 of 0 tasks</span>
+          </div>
         </div>
         <div class="head-actions">
-          <button id="edit-project-btn" class="btn btn-ghost" type="button">Edit</button>
-          <button id="delete-project-btn" class="btn btn-danger" type="button">Delete</button>
+          <button id="edit-project-btn" class="btn btn-ghost" type="button">Edit project</button>
+          <button id="delete-project-btn" class="btn btn-danger-text" type="button">Delete</button>
         </div>
-      </div>
+      </header>
 
-      <form id="project-edit-form" class="card form" hidden novalidate>
-        <div class="field">
-          <label for="project-name">Name</label>
-          <input id="project-name" name="name" type="text" required>
-          <p class="field-error" data-error-for="name" hidden></p>
-        </div>
-        <div class="field">
-          <label for="project-description-input">Description <span class="muted">(optional)</span></label>
-          <textarea id="project-description-input" name="description" rows="3"></textarea>
-          <p class="field-error" data-error-for="description" hidden></p>
-        </div>
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Save changes</button>
-          <button type="button" id="cancel-project-edit" class="btn btn-ghost">Cancel</button>
-        </div>
-      </form>
-
-      <section class="tasks-section">
+      <section class="tasks-section" aria-labelledby="tasks-heading">
         <div class="section-head">
-          <h2>Tasks</h2>
-          <button id="new-task-btn" class="btn btn-primary btn-sm" type="button">New task</button>
+          <div>
+            <h2 id="tasks-heading">Tasks</h2>
+            <p class="muted small">Check things off, or click a title to rename it.</p>
+          </div>
         </div>
 
-        <form id="task-form" class="card form" hidden novalidate>
-          <div class="field">
-            <label for="task-title">Title</label>
-            <input id="task-title" name="title" type="text" required>
-            <p class="field-error" data-error-for="title" hidden></p>
+        <form id="task-form" class="task-composer" novalidate>
+          <div class="composer-title">
+            <label class="visually-hidden" for="task-title">Task title</label>
+            <input id="task-title" name="title" type="text" placeholder="Add a task…" required autocomplete="off">
           </div>
-          <div class="field">
-            <label for="task-description">Description <span class="muted">(optional)</span></label>
-            <textarea id="task-description" name="description" rows="2"></textarea>
-            <p class="field-error" data-error-for="description" hidden></p>
+          <div class="composer-meta">
+            <label class="visually-hidden" for="task-priority">Priority</label>
+            <select id="task-priority" name="priority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+            <label class="visually-hidden" for="task-due_date">Due date</label>
+            <input id="task-due_date" name="due_date" type="date" aria-label="Due date">
+            <button type="submit" class="btn btn-primary">Add task</button>
           </div>
-          <div class="form-actions">
-            <button type="submit" id="task-submit" class="btn btn-primary">Add task</button>
-            <button type="button" id="cancel-task-form" class="btn btn-ghost" hidden>Cancel</button>
-          </div>
+          <p class="field-error" data-error-for="title" hidden></p>
+          <p class="field-error" data-error-for="priority" hidden></p>
+          <p class="field-error" data-error-for="due_date" hidden></p>
         </form>
 
+        <div class="filter-bar" role="group" aria-label="Filter tasks">
+          <button class="filter-chip is-active" type="button" data-filter="all" aria-pressed="true">
+            All <span id="filter-all-count">0</span>
+          </button>
+          <button class="filter-chip" type="button" data-filter="pending" aria-pressed="false">
+            To do <span id="filter-pending-count">0</span>
+          </button>
+          <button class="filter-chip" type="button" data-filter="in_progress" aria-pressed="false">
+            In progress <span id="filter-in_progress-count">0</span>
+          </button>
+          <button class="filter-chip" type="button" data-filter="completed" aria-pressed="false">
+            Done <span id="filter-completed-count">0</span>
+          </button>
+        </div>
+
         <ul id="task-list" class="task-list"></ul>
-        <p id="tasks-empty" class="empty muted" hidden>No tasks yet. Add your first task above.</p>
+        <p id="tasks-empty" class="empty muted" hidden>No tasks yet. Add your first one above.</p>
       </section>
     </section>
   </main>
 
+  <dialog id="task-panel" class="panel-dialog" aria-labelledby="task-panel-title">
+    <form id="task-panel-form" class="panel-card form" novalidate>
+      <input type="hidden" name="task_id" id="task-panel-id">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">Task details</p>
+          <h2 id="task-panel-title">Edit task</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="Close panel">×</button>
+      </div>
+
+      <div class="field">
+        <label for="task-panel-title-input">Title</label>
+        <input id="task-panel-title-input" name="title" type="text" required>
+        <p class="field-error" data-error-for="title" hidden></p>
+      </div>
+
+      <div class="field">
+        <label for="task-panel-description">Description <span class="muted">(optional)</span></label>
+        <textarea id="task-panel-description" name="description" rows="4"></textarea>
+        <p class="field-error" data-error-for="description" hidden></p>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="task-panel-status">Status</label>
+          <select id="task-panel-status" name="status">
+            <option value="pending">To do</option>
+            <option value="in_progress">In progress</option>
+            <option value="completed">Done</option>
+          </select>
+          <p class="field-error" data-error-for="status" hidden></p>
+        </div>
+        <div class="field">
+          <label for="task-panel-priority">Priority</label>
+          <select id="task-panel-priority" name="priority">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+          <p class="field-error" data-error-for="priority" hidden></p>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="task-panel-due-date">Due date <span class="muted">(optional)</span></label>
+        <input id="task-panel-due-date" name="due_date" type="date">
+        <p class="field-error" data-error-for="due_date" hidden></p>
+      </div>
+
+      <div class="panel-actions">
+        <button type="button" id="task-delete" class="btn btn-danger-text">Delete task</button>
+        <div class="panel-actions-right">
+          <button type="button" class="btn btn-ghost" data-close-dialog>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save changes</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="project-dialog" class="modal" aria-labelledby="project-dialog-title">
+    <form id="project-edit-form" class="modal-card form" novalidate>
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Project</p>
+          <h2 id="project-dialog-title">Edit project</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="Close dialog">×</button>
+      </div>
+
+      <div class="field">
+        <label for="project-name">Name</label>
+        <input id="project-name" name="name" type="text" required>
+        <p class="field-error" data-error-for="name" hidden></p>
+      </div>
+
+      <div class="field">
+        <label for="project-description-input">Description <span class="muted">(optional)</span></label>
+        <textarea id="project-description-input" name="description" rows="3"></textarea>
+        <p class="field-error" data-error-for="description" hidden></p>
+      </div>
+
+      <div class="field">
+        <label for="project-due-date-input">Due date <span class="muted">(optional)</span></label>
+        <input id="project-due-date-input" name="due_date" type="date">
+        <p class="field-error" data-error-for="due_date" hidden></p>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" data-close-dialog>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog" class="modal" aria-labelledby="confirm-title">
+    <div class="modal-card">
+      <h2 id="confirm-title">Are you sure?</h2>
+      <p id="confirm-message" class="muted"></p>
+      <div class="modal-actions">
+        <button id="confirm-cancel" class="btn btn-ghost" type="button">Cancel</button>
+        <button id="confirm-accept" class="btn btn-danger" type="button">Delete</button>
+      </div>
+    </div>
+  </dialog>
+{% endblock %}
+
+{% block scripts %}
   <script type="module" src="{{ url_for('static', filename='js/project.js') }}"></script>
-</body>
-</html>
+{% endblock %}

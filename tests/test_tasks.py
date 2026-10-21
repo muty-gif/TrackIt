@@ -19,6 +19,44 @@ class TaskCrudTests(BaseTestCase):
         self.assertEqual(task["status"], "pending")
         self.assertFalse(task["is_completed"])
         self.assertEqual(task["project_id"], self.project_id)
+        self.assertEqual(task["priority"], "medium")
+        self.assertIsNone(task["due_date"])
+        self.assertIsNone(task["completed_at"])
+
+    def test_create_task_with_priority_and_due_date(self):
+        response = self.create_task(
+            self.project_id, "Ship release", priority="high", due_date="2026-11-01"
+        )
+        self.assertEqual(response.status_code, 201)
+        task = response.get_json()["task"]
+        self.assertEqual(task["priority"], "high")
+        self.assertEqual(task["due_date"], "2026-11-01")
+
+    def test_invalid_priority_is_rejected(self):
+        response = self.create_task(self.project_id, "One", priority="urgent")
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("priority", response.get_json()["error"]["fields"])
+
+    def test_invalid_due_date_is_rejected(self):
+        response = self.create_task(self.project_id, "One", due_date="next week")
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("due_date", response.get_json()["error"]["fields"])
+
+    def test_in_progress_status_is_supported(self):
+        task_id = self.create_task(self.project_id, "One").get_json()["task"]["id"]
+        response = self.patch(f"/api/tasks/{task_id}", {"status": "in_progress"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json()["task"]["status"], "in_progress")
+        self.assertFalse(response.get_json()["task"]["is_completed"])
+
+    def test_completed_at_tracks_completion(self):
+        task_id = self.create_task(self.project_id, "One").get_json()["task"]["id"]
+
+        completed = self.patch(f"/api/tasks/{task_id}", {"status": "completed"}).get_json()["task"]
+        self.assertIsNotNone(completed["completed_at"])
+
+        reopened = self.patch(f"/api/tasks/{task_id}", {"status": "pending"}).get_json()["task"]
+        self.assertIsNone(reopened["completed_at"])
 
     def test_create_task_requires_a_title(self):
         response = self.post(f"/api/projects/{self.project_id}/tasks", {"description": "x"})

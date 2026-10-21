@@ -17,21 +17,28 @@ main_bp = Blueprint("main", __name__)
 @main_bp.get("/")
 def index():
     if get_current_user():
-        return redirect(url_for("main.projects_page"))
+        return render_template("dashboard.html")
     return redirect(url_for("main.login_page"))
+
+
+@main_bp.get("/dashboard")
+def dashboard_page():
+    if not get_current_user():
+        return redirect(url_for("main.login_page", next=request.path))
+    return redirect(url_for("main.index"))
 
 
 @main_bp.get("/login")
 def login_page():
     if get_current_user():
-        return redirect(url_for("main.projects_page"))
+        return redirect(url_for("main.index"))
     return render_template("login.html")
 
 
 @main_bp.get("/register")
 def register_page():
     if get_current_user():
-        return redirect(url_for("main.projects_page"))
+        return redirect(url_for("main.index"))
     return render_template("register.html")
 
 

@@ -1,17 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Create account · TrackIt</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
-</head>
-<body class="auth-page">
-  <main class="auth-card">
-    <h1 class="brand-lg">TrackIt</h1>
+{% extends "base.html" %}
+
+{% block title %}Create account · TrackIt{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block body %}
+  <main id="main" class="auth-card">
+    <button class="icon-btn auth-theme" type="button" data-theme-toggle aria-label="Toggle dark mode">
+      <span class="theme-icon" aria-hidden="true">◐</span>
+    </button>
+
+    <a class="brand brand-lg" href="/">TrackIt<span class="brand-dot">.</span></a>
     <p class="muted">Create an account to start tracking your projects.</p>
 
-    <div id="form-error" class="alert alert-error" hidden></div>
+    <div id="form-error" class="alert alert-error" role="alert" hidden></div>
 
     <form id="register-form" class="form" novalidate>
       <div class="field">
@@ -38,7 +39,8 @@
 
     <p class="muted center">Already registered? <a href="{{ url_for('main.login_page') }}">Log in</a></p>
   </main>
+{% endblock %}
 
+{% block scripts %}
   <script type="module" src="{{ url_for('static', filename='js/register.js') }}"></script>
-</body>
-</html>
+{% endblock %}

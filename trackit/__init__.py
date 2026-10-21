@@ -43,6 +43,7 @@ def create_app(config_object="config.Config", overrides: dict | None = None) -> 
 
     from .auth.utils import init_app as init_auth
     from .auth.routes import auth_bp
+    from .dashboard.routes import dashboard_bp
     from .main.routes import main_bp
     from .projects.routes import projects_bp
     from .tasks.routes import tasks_bp
@@ -51,6 +52,7 @@ def create_app(config_object="config.Config", overrides: dict | None = None) -> 
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(dashboard_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(tasks_bp)
 

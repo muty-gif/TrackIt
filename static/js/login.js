@@ -8,7 +8,7 @@ function safeNext() {
   const next = new URLSearchParams(window.location.search).get("next");
   // Only allow same-site, absolute paths.
   if (next && next.startsWith("/") && !next.startsWith("//")) return next;
-  return "/projects";
+  return "/";
 }
 
 form.addEventListener("submit", async (event) => {

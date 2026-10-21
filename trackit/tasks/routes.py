@@ -7,7 +7,7 @@ from flask import Blueprint, current_app, jsonify
 from ..access import get_owned_task_or_404
 from ..auth.utils import login_required
 from ..extensions import db
-from ..models import TaskStatus
+from ..models import TaskPriority, TaskStatus, utcnow
 from ..validation import Validator, get_json_body
 
 tasks_bp = Blueprint("tasks", __name__, url_prefix="/api/tasks")
@@ -32,18 +32,39 @@ def update_task(task_id: int):
         # A task belongs to exactly one project and cannot be moved.
         validator.errors["project_id"] = "A task cannot be moved to another project."
 
+    title = task.title
+    description = task.description
+    status = task.status
+    priority = task.priority
+    due_date = task.due_date
+
     if "title" in data:
-        task.title = validator.string(
+        title = validator.string(
             data, "title", max_length=current_app.config["TASK_TITLE_MAX_LENGTH"]
         )
     if "description" in data:
-        task.description = validator.string(
+        description = validator.string(
             data, "description", required=False, max_length=current_app.config["TEXT_MAX_LENGTH"]
         )
     if "status" in data:
-        task.status = validator.choice(data, "status", TaskStatus.ALL)
+        status = validator.choice(data, "status", TaskStatus.ALL)
+    if "priority" in data:
+        priority = validator.choice(data, "priority", TaskPriority.ALL)
+    if "due_date" in data:
+        due_date = validator.date(data)
 
     validator.raise_if_errors()
+
+    task.title = title
+    task.description = description
+    task.priority = priority
+    task.due_date = due_date
+    if status == TaskStatus.COMPLETED:
+        if task.completed_at is None:
+            task.completed_at = utcnow()
+    else:
+        task.completed_at = None
+    task.status = status
 
     db.session.commit()
     return jsonify({"task": task.to_dict()})

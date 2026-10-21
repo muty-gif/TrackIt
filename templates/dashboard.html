@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · TrackIt{% endblock %}
+
+{% block nav %}
+  <header id="app-nav" class="app-nav" aria-label="Main navigation"></header>
+{% endblock %}
+
+{% block body %}
+  <main id="main" class="container dashboard">
+    <div id="global-error" class="alert alert-error" role="alert" hidden></div>
+
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">Overview</p>
+        <h1>Dashboard</h1>
+        <p id="dashboard-subtitle" class="muted">Here is what needs your attention.</p>
+      </div>
+      <a class="btn btn-primary" href="{{ url_for('main.projects_page') }}">View projects</a>
+    </div>
+
+    <section id="metric-grid" class="metric-grid" aria-label="Summary metrics"></section>
+
+    <div class="dashboard-grid">
+      <section class="panel" aria-labelledby="status-heading">
+        <div class="panel-head">
+          <div>
+            <h2 id="status-heading">Tasks by status</h2>
+            <p class="muted small">A snapshot of everything on your plate.</p>
+          </div>
+        </div>
+        <div id="status-chart" class="status-chart"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="progress-heading">
+        <div class="panel-head">
+          <div>
+            <h2 id="progress-heading">Project progress</h2>
+            <p class="muted small">Completion across your active projects.</p>
+          </div>
+          <a class="text-link" href="{{ url_for('main.projects_page') }}">All projects</a>
+        </div>
+        <div id="project-progress" class="project-progress"></div>
+      </section>
+    </div>
+
+    <div class="dashboard-grid">
+      <section class="panel" aria-labelledby="upcoming-heading">
+        <div class="panel-head">
+          <div>
+            <h2 id="upcoming-heading">Upcoming deadlines</h2>
+            <p class="muted small">The next tasks that are due.</p>
+          </div>
+        </div>
+        <ul id="upcoming-list" class="quick-list"></ul>
+      </section>
+
+      <section class="panel" aria-labelledby="recent-heading">
+        <div class="panel-head">
+          <div>
+            <h2 id="recent-heading">Recently updated</h2>
+            <p class="muted small">Pick up where you left off.</p>
+          </div>
+        </div>
+        <ul id="recent-list" class="quick-list"></ul>
+      </section>
+    </div>
+  </main>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

@@ -11,23 +11,36 @@ The behaviour implemented here is described in [`USE-CASES.md`](USE-CASES.md).
 
 ## Screenshots
 
+**Dashboard**
+
+![Dashboard with summary metrics, task status chart and project progress](docs/screenshots/dashboard.png)
+
 **Sign in and register**
 
 | Log in | Register |
 |---|---|
-| ![Log in page](docs/screenshots/01-login.png) | ![Registration page](docs/screenshots/02-register.png) |
+| ![Log in page](docs/screenshots/login.png) | ![Registration page](docs/screenshots/register.png) |
 
 **Projects**
 
-| Create a project | Project list |
+| Empty workspace | New project dialog |
 |---|---|
-| ![New project form filled in](docs/screenshots/03-new-project.png) | ![Projects list showing one project](docs/screenshots/04-projects.png) |
+| ![Empty projects page](docs/screenshots/projects-empty.png) | ![Create project dialog with name, description and due date](docs/screenshots/new-project.png) |
+
+| Project list | Project workspace |
+|---|---|
+| ![Projects list showing a project card with progress](docs/screenshots/projects.png) | ![Project page with tasks, filters and inline controls](docs/screenshots/project.png) |
 
 **Tasks**
 
-| Add a task | Track progress |
-|---|---|
-| ![New task form filled in](docs/screenshots/05-new-task.png) | ![Task list with two tasks completed](docs/screenshots/06-tasks.png) |
+![Task list with inline status, priority and due-date controls](docs/screenshots/tasks.png)
+
+## Demo videos
+
+Short screen recordings of the redesigned interface:
+
+- [Dashboard tour](docs/videos/dashboard-tour.mp4)
+- [Project and task controls](docs/videos/project-tasks-tour.mp4)
 
 ## Stack
 
@@ -52,16 +65,19 @@ TrackIt/
 │   ├── validation.py          # request/field validation
 │   ├── access.py              # ownership lookups ("not found" for foreign rows)
 │   ├── auth/                  # blueprint: register / login / logout / me
+│   ├── dashboard/             # blueprint: dashboard metrics + quick lists
 │   ├── projects/              # blueprint: project CRUD + nested task list/create
 │   ├── tasks/                 # blueprint: task read / update / delete
 │   └── main/                  # blueprint: HTML page shells + page guards
-├── templates/                 # HTML shells (login, register, projects, project)
+├── templates/                 # HTML shells (dashboard, login, register, projects, project)
 ├── static/
 │   ├── css/styles.css
 │   └── js/                    # api.js, ui.js, nav.js + one module per page
 ├── migrations/                # Alembic migrations managed by Flask-Migrate
-├── tests/                     # unittest suite (57 tests)
-├── docs/screenshots/          # screenshots used in this README
+├── tests/                     # unittest suite (70 tests)
+├── docs/
+│   ├── screenshots/           # screenshots used in this README
+│   └── videos/                # short demo recordings
 ├── USE-CASES.md               # requirements / use case specification
 ├── requirements.txt
 └── .env.example
@@ -89,8 +105,8 @@ python -m unittest discover -v
 ```
 
 The suite runs against an in-memory SQLite database and covers registration,
-login, logout, project and task CRUD, validation, cascade deletion and — most
-importantly — cross-user isolation.
+login, logout, project and task CRUD, validation, dashboard metrics, cascade
+deletion and — most importantly — cross-user isolation.
 
 ## API reference
 
@@ -103,6 +119,17 @@ Error responses always look like:
 { "error": { "code": "validation_error", "message": "Validation failed.",
              "fields": { "name": "This field is required." } } }
 ```
+
+### Dashboard
+
+| Method | Path | Auth | Success |
+|---|---|---|---|
+| GET | `/api/dashboard` | yes | `200` `{metrics, status_counts, projects, upcoming, recent}` |
+
+`metrics` contains `project_count`, `open_task_count`, `completed_this_week`,
+`overdue_task_count` and `due_today_count`. `status_counts` always includes
+`pending`, `in_progress` and `completed`. Dates are calendar dates compared in
+UTC; a task is overdue when its due date is before today and it is not completed.
 
 ### Auth
 
@@ -118,30 +145,33 @@ Error responses always look like:
 | Method | Path | Body | Success |
 |---|---|---|---|
 | GET | `/api/projects` | – | `200` `{projects: [...]}` (with task counters) |
-| POST | `/api/projects` | `{name, description?}` | `201` `{project}` |
+| POST | `/api/projects` | `{name, description?, due_date?}` | `201` `{project}` |
 | GET | `/api/projects/<id>` | – | `200` `{project}` (includes tasks) |
-| PATCH | `/api/projects/<id>` | `{name?, description?}` | `200` `{project}` |
+| PATCH | `/api/projects/<id>` | `{name?, description?, due_date?}` | `200` `{project}` |
 | DELETE | `/api/projects/<id>` | – | `204` (cascades to tasks) |
 | GET | `/api/projects/<id>/tasks` | – | `200` `{tasks: [...]}` |
-| POST | `/api/projects/<id>/tasks` | `{title, description?, status?}` | `201` `{task}` |
+| POST | `/api/projects/<id>/tasks` | `{title, description?, status?, priority?, due_date?}` | `201` `{task}` |
 
 ### Tasks
 
 | Method | Path | Body | Success |
 |---|---|---|---|
 | GET | `/api/tasks/<id>` | – | `200` `{task}` |
-| PATCH | `/api/tasks/<id>` | `{title?, description?, status?}` | `200` `{task}` |
+| PATCH | `/api/tasks/<id>` | `{title?, description?, status?, priority?, due_date?}` | `200` `{task}` |
 | DELETE | `/api/tasks/<id>` | – | `204` |
 
-`status` is either `pending` (default) or `completed`. A task's `project_id`
-cannot be changed; attempts return `422`.
+`status` is `pending` (default), `in_progress` or `completed`. `priority` is
+`low`, `medium` (default) or `high`. `due_date` is an ISO calendar date
+(`YYYY-MM-DD`) or `null`; project due dates use the same format. `completed_at`
+is set automatically when a task becomes completed and cleared when it is
+reopened. A task's `project_id` cannot be changed; attempts return `422`.
 
 ## Data model
 
 - **User** — `id`, unique `email` (stored lower-cased), `password_hash`, `created_at`.
-- **Project** — `id`, `name`, `description`, `owner_id` → `users.id`, timestamps.
-- **Task** — `id`, `title`, `description`, `status`, `project_id` → `projects.id`,
-  timestamps.
+- **Project** — `id`, `name`, `description`, `due_date`, `owner_id` → `users.id`, timestamps.
+- **Task** — `id`, `title`, `description`, `status`, `priority`, `due_date`,
+  `completed_at`, `project_id` → `projects.id`, timestamps.
 
 Deleting a user or a project cascades to its projects/tasks (also enforced at the
 database level with `ON DELETE CASCADE`).
@@ -159,7 +189,9 @@ These resolve the open questions raised in `USE-CASES.md`:
 | Bad login | `401` with a single generic message for unknown email *and* wrong password. |
 | Registration | The new user is logged in immediately. |
 | Deleting a project | Deletes its tasks (cascade). |
-| Task status | Two values only: `pending` / `completed`. Marking is idempotent. |
+| Task status | `pending`, `in_progress` or `completed`. Marking is idempotent. |
+| Task priority | `low`, `medium` (default) or `high`. |
+| Due dates | Optional calendar dates; dashboard ignores completed tasks for overdue/upcoming. |
 | Task project | Immutable — a task cannot be moved between projects. |
 | Session | Signed cookie, `HttpOnly`, `SameSite=Lax`, 7-day lifetime. |
 

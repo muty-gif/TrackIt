@@ -28,8 +28,19 @@ class TaskStatus:
     """Allowed values for ``Task.status``."""
 
     PENDING = "pending"
+    IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
-    ALL = (PENDING, COMPLETED)
+    ALL = (PENDING, IN_PROGRESS, COMPLETED)
+
+
+class TaskPriority:
+    """Allowed values for ``Task.priority``, ordered from low to high."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    ALL = (LOW, MEDIUM, HIGH)
+    DEFAULT = MEDIUM
 
 
 class User(db.Model):
@@ -67,6 +78,7 @@ class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    due_date = db.Column(db.Date, nullable=True)
     owner_id = db.Column(
         db.Integer,
         db.ForeignKey("users.id", ondelete="CASCADE"),
@@ -97,6 +109,7 @@ class Project(db.Model):
             "id": self.id,
             "name": self.name,
             "description": self.description,
+            "due_date": self.due_date.isoformat() if self.due_date else None,
             "created_at": _iso(self.created_at),
             "updated_at": _iso(self.updated_at),
         }
@@ -112,7 +125,11 @@ class Task(db.Model):
     __tablename__ = "tasks"
     __table_args__ = (
         db.CheckConstraint(
-            "status IN ('pending', 'completed')", name="ck_tasks_status"
+            "status IN ('pending', 'in_progress', 'completed')",
+            name="ck_tasks_status",
+        ),
+        db.CheckConstraint(
+            "priority IN ('low', 'medium', 'high')", name="ck_tasks_priority"
         ),
     )
 
@@ -120,6 +137,11 @@ class Task(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), nullable=False, default=TaskStatus.PENDING)
+    priority = db.Column(
+        db.String(10), nullable=False, default=TaskPriority.DEFAULT
+    )
+    due_date = db.Column(db.Date, nullable=True)
+    completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     project_id = db.Column(
         db.Integer,
         db.ForeignKey("projects.id", ondelete="CASCADE"),
@@ -143,6 +165,9 @@ class Task(db.Model):
             "title": self.title,
             "description": self.description,
             "status": self.status,
+            "priority": self.priority,
+            "due_date": self.due_date.isoformat() if self.due_date else None,
+            "completed_at": _iso(self.completed_at),
             "is_completed": self.is_completed,
             "project_id": self.project_id,
             "created_at": _iso(self.created_at),

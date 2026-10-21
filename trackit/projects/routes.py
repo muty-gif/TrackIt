@@ -8,7 +8,7 @@ from sqlalchemy import case, func
 from ..access import get_owned_project_or_404
 from ..auth.utils import login_required
 from ..extensions import db
-from ..models import Project, Task, TaskStatus
+from ..models import Project, Task, TaskPriority, TaskStatus, utcnow
 from ..validation import Validator, get_json_body
 
 projects_bp = Blueprint("projects", __name__, url_prefix="/api/projects")
@@ -48,9 +48,12 @@ def create_project():
     description = validator.string(
         data, "description", required=False, max_length=current_app.config["TEXT_MAX_LENGTH"]
     )
+    due_date = validator.date(data)
     validator.raise_if_errors()
 
-    project = Project(name=name, description=description, owner=g.current_user)
+    project = Project(
+        name=name, description=description, due_date=due_date, owner=g.current_user
+    )
     db.session.add(project)
     db.session.commit()
 
@@ -79,6 +82,8 @@ def update_project(project_id: int):
         project.description = validator.string(
             data, "description", required=False, max_length=current_app.config["TEXT_MAX_LENGTH"]
         )
+    if "due_date" in data:
+        project.due_date = validator.date(data)
     validator.raise_if_errors()
 
     db.session.commit()
@@ -122,9 +127,21 @@ def create_task(project_id: int):
     status = validator.choice(
         data, "status", TaskStatus.ALL, required=False, default=TaskStatus.PENDING
     )
+    priority = validator.choice(
+        data, "priority", TaskPriority.ALL, required=False, default=TaskPriority.DEFAULT
+    )
+    due_date = validator.date(data)
     validator.raise_if_errors()
 
-    task = Task(title=title, description=description, status=status, project=project)
+    task = Task(
+        title=title,
+        description=description,
+        status=status,
+        priority=priority,
+        due_date=due_date,
+        completed_at=utcnow() if status == TaskStatus.COMPLETED else None,
+        project=project,
+    )
     db.session.add(task)
     db.session.commit()
 

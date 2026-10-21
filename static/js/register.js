@@ -22,7 +22,7 @@ form.addEventListener("submit", async (event) => {
       body: { email: values.email, password: values.password },
       redirectOn401: false,
     });
-    window.location.assign("/projects");
+    window.location.assign("/");
   } catch (error) {
     if (error instanceof ApiError && Object.keys(error.fields).length) {
       applyFieldErrors(form, error.fields);
